@@ -168,7 +168,6 @@ class ClusterPredictor(object):
 
         prediction = self.model.predict(text)
 
-        # 对概率进行排序
         prediction_1_index = np.argsort(prediction[1])
         prediction_1_index = np.array(list(reversed(prediction_1_index)))
         prediction_1 = prediction[1][prediction_1_index]
@@ -176,9 +175,6 @@ class ClusterPredictor(object):
         prediction_0 = np.array(prediction[0])[prediction_1_index]
 
         prediction = (prediction_0, prediction_1)
-        # if len(prediction[0]) > self.top_k:
-        #    prediction = (prediction_0[:self.top_k], prediction_1[:self.top_k])
-
         cluster_top_k = []
         for each_label in prediction[0]:
             if each_label.startswith('__label__'):
@@ -187,7 +183,6 @@ class ClusterPredictor(object):
                 cluster_top_k.append(each_label)
         cluster_top_k_prop = prediction[1]
 
-        # 标签转换为向量
         project_labels_embedding = np.zeros((len(project_labels), 768))
         for i, each_project_label in enumerate(project_labels):
             if each_project_label in self.label_embed_cache:
@@ -196,43 +191,13 @@ class ClusterPredictor(object):
                 embed = self.embedding_model.encode([each_project_label], show_progress_bar=False)
                 project_labels_embedding[i,:] = embed[0]
 
-        # 搜索近似标签
         cluster_top_k_embedding = np.zeros((len(cluster_top_k), 768))
         for i, each_pred in enumerate(cluster_top_k):
             cluster_top_k_embedding[i,:] = self.clustering_model.cluster_centers_[int(each_pred)]
 
         # (project_labels_embedding, top_k)
         similarity_matrix = cosine_similarity(project_labels_embedding, cluster_top_k_embedding)
-        # np.zeros((len(project_labels_embedding),))
-        
-        # 方案一
-        '''
-        index_array = np.argmax(similarity_matrix, axis=1)
 
-        raw_prediction_labels = [project_labels[i] for i in range(len(project_labels_embedding))]
-        raw_prediction_logits = [cluster_top_k_prop[index_array[i]] * similarity_matrix[i, index_array[i]] for i in range(len(project_labels_embedding))]
-        # raw_prediction_logits = [cluster_top_k_prop[index_array[i]] for i in range(len(project_labels_embedding))]
-        prediction_list = [(raw_prediction_labels[i], raw_prediction_logits[i]) for i in range(len(project_labels_embedding))]
-        '''
-
-        # 方案二
-        '''
-        similarity_matrix_sum = similarity_matrix.sum(axis=1, keepdims=True)
-        similarity_matrix /= similarity_matrix_sum
-
-        raw_prediction_labels = [project_labels[i] for i in range(len(project_labels_embedding))]
-        raw_prediction_logits = [0] * len(project_labels_embedding)
-        for i in range(len(project_labels_embedding)):
-            for each_k in range(self.top_k):
-                raw_prediction_logits[i] += cluster_top_k_prop[each_k] * similarity_matrix[i, each_k]
-            # raw_prediction_logits[i] /= self.top_k
-        # scaler = MinMaxScaler()
-        # raw_prediction_logits_new = scaler.fit_transform(np.array(raw_prediction_logits).reshape(-1, 1))
-
-        prediction_list = [(raw_prediction_labels[i], raw_prediction_logits[i]) for i in range(len(project_labels_embedding))]
-        '''
-
-        # 方案三
         raw_prediction_labels = []
         raw_prediction_logits = []
         index_array = np.argmax(similarity_matrix, axis=0)
@@ -264,14 +229,12 @@ class ClusterPredictor(object):
             project = each_data['project']
             project_labels = each_data['project_labels']
 
-            # 过滤project labels
             filtered_project_labels = set()
             for each_project_label in project_labels:
                 if all(each_bad_label not in each_project_label for each_bad_label in bad_labels):
                     filtered_project_labels.add(each_project_label)
             project_labels = list(filtered_project_labels)
 
-            # 对概率进行排序
             prediction_1_index = np.argsort(prediction[1])
             prediction_1_index = np.array(list(reversed(prediction_1_index)))
             prediction_1 = prediction[1][prediction_1_index]
@@ -279,8 +242,6 @@ class ClusterPredictor(object):
             prediction_0 = np.array(prediction[0])[prediction_1_index]
 
             prediction = (prediction_0, prediction_1)
-            # if len(prediction[0]) > self.top_k:
-            #    prediction = (prediction_0[:self.top_k], prediction_1[:self.top_k])
 
             cluster_top_k = []
             for each_label in prediction[0]:
@@ -290,7 +251,6 @@ class ClusterPredictor(object):
                     cluster_top_k.append(each_label)
             cluster_top_k_prop = prediction[1]
 
-            # 标签转换为向量
             project_labels_embedding = np.zeros((len(project_labels), 768))
             for i, each_project_label in enumerate(project_labels):
                 if each_project_label in self.label_embed_cache:
@@ -299,7 +259,6 @@ class ClusterPredictor(object):
                     embed = self.embedding_model.encode([each_project_label], show_progress_bar=False)
                     project_labels_embedding[i,:] = embed[0]
 
-            # 搜索近似标签
             cluster_top_k_embedding = np.zeros((len(cluster_top_k), 768))
             for i, each_pred in enumerate(cluster_top_k):
                 cluster_top_k_embedding[i,:] = self.clustering_model.cluster_centers_[int(each_pred)]
@@ -307,7 +266,6 @@ class ClusterPredictor(object):
             # (project_labels_embedding, top_k)
             similarity_matrix = cosine_similarity(project_labels_embedding, cluster_top_k_embedding)
 
-            # 方案三
             raw_prediction_labels = []
             raw_prediction_logits = []
             index_array = np.argmax(similarity_matrix, axis=0)
@@ -366,7 +324,6 @@ class DirectPredictor(object):
         ret = []
 
         for each_predict in prediction:
-            # 对概率进行排序
             prediction_1_index = np.argsort(each_predict[1])[::-1]
             prediction_1 = each_predict[1][prediction_1_index]
             prediction_0 = np.array(each_predict[0])[prediction_1_index]
