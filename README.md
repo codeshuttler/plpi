@@ -22,6 +22,21 @@ scikit_learn==1.0
 sentence_transformers==2.1.0
 ```
 
+## Download Embeddings
+
+embedding/glove.6B: Embedding glove can be downloaded from the GloVe repository at [GloVe](https://github.com/stanfordnlp/GloVe) Github Repository. Download URL - [glove.6B.zip](https://huggingface.co/stanfordnlp/glove/resolve/main/glove.6B.zip).
+
+embedding/word2vec/word2vec-google-news-300.txt: Word2vec Embedding is also available on GitHub [word2vec-GoogleNews-vectors](https://github.com/mmihaltz/word2vec-GoogleNews-vectors).
+
+Rename it from "GoogleNews-vectors-negative300.bin" to "word2vec-google-news-300".
+Then we can use gensim to convert its model into txt data (Size 3.39G -> 10G):
+```
+from gensim.models.keyedvectors import KeyedVectors
+ 
+model = KeyedVectors.load_word2vec_format('word2vec-google-news-300', binary=True)
+model.save_word2vec_format('word2vec-google-news-300.txt', binary=False)
+```
+
 ## Prepare dataset
 
 **PLPI_GitHub_dataset.7z**
